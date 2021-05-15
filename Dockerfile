@@ -1,12 +1,16 @@
-FROM ruby:3.0.1
-
-RUN bundle config --global frozen 1
-
+FROM ruby:alpine AS build
+RUN apk add --no-cache alpine-sdk ruby-dev
 WORKDIR /usr/src/app
-
-COPY Gemfile Gemfile.lock ./
-RUN bundle install
-
 COPY . .
+ENV GEM_HOME=/usr/local
+RUN gem build wildcard-dnsd.gemspec
+RUN gem install ./wildcard-dnsd-*.gem
 
-CMD ["./bin/wildcard-dnsd"]
+
+FROM ruby:alpine
+RUN apk add --no-cache ruby ruby-io-console ruby-json
+COPY --from=build /usr/local/ /usr/local/
+ENV GEM_HOME=/usr/local
+
+EXPOSE 53/udp
+CMD ["wildcard-dnsd"]
